@@ -1,0 +1,84 @@
+from unittest.mock import patch
+from src.utils.manage_rules.rule_16_adhoc_query import Rule16_Adhoc_Query
+
+
+@patch(
+    "src.utils.manage_rules.rule_16_adhoc_query.BaseRule.__init__",
+    return_value=None,
+)
+def test_get_query_rule16_adhoc_query_positive(mock_init):
+    """
+    Positive scenario for Rule16_Adhoc_Query.get_query
+
+    - Patches BaseRule.__init__ so parent initialisation doesn't run.
+    - Verifies that the function builds the correct data_sql and count_sql
+      for adhoc queries (cost + user_name/query aggregation).
+    """
+
+    rule = Rule16_Adhoc_Query()
+
+    table_name = "my_table"
+    version_id = "v1"
+    market = "IN"
+    filters = "is_adhoc = true"
+    sort_by = "cost"
+    sort = "DESC"
+    offset = 5
+    page_size = 10
+
+    data_sql, count_sql = rule.get_query(
+        table_name=table_name,
+        version_id=version_id,
+        market=market,
+        filters=filters,
+        sort_by=sort_by,
+        sort=sort,
+        offset=offset,
+        page_size=page_size,
+    )
+
+    # -------------------------------------------------
+    # Normalise helper – lower + collapse extra spaces
+    # -------------------------------------------------
+    def norm(s: str) -> str:
+        return " ".join(s.lower().split())
+
+    data_norm = norm(data_sql)
+    count_norm = norm(count_sql)
+
+    # -------------------------------------------------
+    # Validate data_sql
+    # -------------------------------------------------
+    # SELECT part
+    assert data_norm.startswith(
+        f"select count(*) as count, sum(cost) as cost, user_name, query from {table_name}".lower()
+    )
+
+    # WHERE clause
+    where_clause_norm = (
+        "where version_id = 'v1' and project_name = 'in' and is_adhoc = true"
+    )
+    assert where_clause_norm in data_norm
+
+    # GROUP BY user_name, query
+    assert "group by user_name, query" in data_norm
+
+    # ORDER BY + pagination
+    assert f"order by {sort_by} {sort}".lower() in data_norm
+    assert f"offset {offset}" in data_norm
+    assert f"limit {page_size}" in data_norm
+
+    # -------------------------------------------------
+    # Validate count_sql
+    # -------------------------------------------------
+    # Overall structure: count over subquery of distinct user_name
+    assert "select count(*) from" in count_norm
+    assert "select user_name from" in count_norm
+    assert f"from {table_name}".lower() in count_norm
+
+    # Same WHERE clause inside subquery
+    assert where_clause_norm in count_norm
+
+    # GROUP BY user_name and subquery alias
+    assert "group by user_name" in count_norm
+    assert "as subquery" in count_norm
