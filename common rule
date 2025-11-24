@@ -1,0 +1,50 @@
+# test_common_rule_base.py
+
+from unittest.mock import patch
+from src.utils.manage_rules.common_rule_base import CommonRule
+
+
+@patch("src.utils.manage_rules.common_rule_base.BaseRule.__init__", return_value=None)
+def test_get_query_positive(mock_init):
+    """
+    Positive scenario:
+    Ensures SQL strings are generated correctly.
+    """
+
+    rule = CommonRule()   # BaseRule.__init__ patched so it doesn't run
+
+    table_name = "my_table"
+    version_id = "v1"
+    market = "IN"
+    filters = "user_name = 'alice'"
+    sort_by = "cost"
+    sort = "DESC"
+    offset = 5
+    page_size = 10
+
+    data_sql, count_sql = rule.get_query(
+        table_name=table_name,
+        version_id=version_id,
+        market=market,
+        filters=filters,
+        value=None,
+        sort_by=sort_by,
+        sort=sort,
+        offset=offset,
+        page_size=page_size,
+    )
+
+    expected_where = (
+        "version_id = 'v1' AND project_name = 'IN' AND user_name = 'alice'"
+    )
+
+    # Validate data_sql
+    assert f"FROM {table_name} WHERE {expected_where}" in data_sql
+    assert f"ORDER BY {sort_by} {sort}" in data_sql
+    assert f"OFFSET {offset}" in data_sql
+    assert f"LIMIT {page_size}" in data_sql
+
+    # Validate count_sql
+    assert f"FROM {table_name} WHERE {expected_where}" in count_sql
+    assert "GROUP BY user_name, query" in count_sql
+    assert "AS subquery" in count_sql
