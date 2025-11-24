@@ -1,0 +1,70 @@
+# tests/test_default_rule_query.py
+
+from unittest.mock import patch
+from src.utils.manage_rules.default_rule_query import DefaultRule
+
+
+@patch("src.utils.manage_rules.default_rule_query.BaseRule.__init__", return_value=None)
+def test_get_query_default_rule_positive(mock_base_init):
+    """
+    Positive scenario:
+    - BaseRule.__init__ is patched (so parent setup doesn't run)
+    - Verifies that get_query builds correct SQL for data & count.
+    """
+
+    rule = DefaultRule()  # uses patched BaseRule.__init__
+
+    table_name = "my_table"
+    version_id = "v1"
+    market = "IN"
+    filters = "user_name = 'alice'"
+    sort_by = "count"
+    sort = "DESC"
+    offset = 5
+    page_size = 10
+
+    data_sql, count_sql = rule.get_query(
+        table_name=table_name,
+        version_id=version_id,
+        market=market,
+        filters=filters,
+        sort_by=sort_by,
+        sort=sort,
+        offset=offset,
+        page_size=page_size,
+    )
+
+    # Normalise case + extra spaces so formatting differences don't break the test
+    def norm(s: str) -> str:
+        return " ".join(s.lower().split())
+
+    data_norm = norm(data_sql)
+    count_norm = norm(count_sql)
+
+    # ---- Validate data_sql ----
+    # SELECT user_name, query, COUNT(*) AS count FROM ...
+    assert data_norm.startswith(
+        f"select user_name, query, count(*) as count from {table_name}"
+    )
+
+    # WHERE clause with version_id, project_name, filters
+    assert "where version_id = 'v1' and project_name = 'in' and user_name = 'alice'" in data_norm
+
+    # GROUP BY, ORDER BY, OFFSET, LIMIT
+    assert "group by user_name, query" in data_norm
+    assert f"order by {sort_by} {sort}".lower() in data_norm
+    assert f"offset {offset}" in data_norm
+    assert f"limit {page_size}" in data_norm
+
+    # ---- Validate count_sql ----
+    # SELECT COUNT(*) FROM ( SELECT user_name FROM ...
+    assert count_norm.startswith(
+        f"select count(*) from ( select user_name from {table_name}"
+    )
+
+    # Same WHERE clause inside subquery
+    assert "where version_id = 'v1' and project_name = 'in' and user_name = 'alice'" in count_norm
+
+    # GROUP BY and subquery alias
+    assert "group by user_name, query" in count_norm
+    assert "as subquery" in count_norm
