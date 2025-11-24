@@ -1,23 +1,30 @@
-# test_common_rule_base.py
+
 
 from unittest.mock import patch
-from src.utils.manage_rules.common_rule_base import CommonRule
+from src.utils.manage_rules.rule10_same_table_multiple_schemas import (
+    Rule10_Same_Table_Multiple_Schemas,
+)
 
 
-@patch("src.utils.manage_rules.common_rule_base.BaseRule.__init__", return_value=None)
-def test_get_query_positive(mock_init):
+@patch(
+    "src.utils.manage_rules.rule10_same_table_multiple_schemas.BaseRule.__init__",
+    return_value=None,
+)
+def test_get_query_rule10_same_table_multiple_schemas_positive(mock_base_init):
     """
     Positive scenario:
-    Ensures SQL strings are generated correctly.
+    - Patches BaseRule.__init__ so parent setup doesn't run.
+    - Verifies that Rule10_Same_Table_Multiple_Schemas.get_query
+      builds the expected SQL for data + count.
     """
 
-    rule = CommonRule()   # BaseRule.__init__ patched so it doesn't run
+    rule = Rule10_Same_Table_Multiple_Schemas()
 
     table_name = "my_table"
     version_id = "v1"
     market = "IN"
-    filters = "user_name = 'alice'"
-    sort_by = "cost"
+    filters = "columns_with_data_type = 'INT'"
+    sort_by = "count"
     sort = "DESC"
     offset = 5
     page_size = 10
@@ -27,24 +34,52 @@ def test_get_query_positive(mock_init):
         version_id=version_id,
         market=market,
         filters=filters,
-        value=None,
         sort_by=sort_by,
         sort=sort,
         offset=offset,
         page_size=page_size,
     )
 
-    expected_where = (
-        "version_id = 'v1' AND project_name = 'IN' AND user_name = 'alice'"
+    # Normalise (case + extra spaces)
+    def norm(s: str) -> str:
+        return " ".join(s.lower().split())
+
+    data_norm = norm(data_sql)
+    count_norm = norm(count_sql)
+
+    # Common bits
+    where_clause_norm = (
+        "where version_id = 'v1' and project_name = 'in' "
+        "and columns_with_data_type = 'int'"
     )
+    schema_agg_expr = (
+        "string_agg(schema_name || ':' || table_name, ', ') as schema_table_list"
+    ).lower()
 
-    # Validate data_sql
-    assert f"FROM {table_name} WHERE {expected_where}" in data_sql
-    assert f"ORDER BY {sort_by} {sort}" in data_sql
-    assert f"OFFSET {offset}" in data_sql
-    assert f"LIMIT {page_size}" in data_sql
+    # -------- Validate data_sql --------
+    # SELECT count(*), columns_with_data_type, project_name, STRING_AGG(...) ...
+    assert "select count(*) as count" in data_norm
+    assert "columns_with_data_type" in data_norm
+    assert "project_name" in data_norm
+    assert schema_agg_expr in data_norm
+    assert f"from {table_name}".lower() in data_norm
 
-    # Validate count_sql
-    assert f"FROM {table_name} WHERE {expected_where}" in count_sql
-    assert "GROUP BY user_name, query" in count_sql
-    assert "AS subquery" in count_sql
+    # WHERE + GROUP BY + ORDER BY + pagination
+    assert where_clause_norm in data_norm
+    assert "group by columns_with_data_type, project_name" in data_norm
+    assert f"order by {sort_by} {sort}".lower() in data_norm
+    assert f"offset {offset}" in data_norm
+    assert f"limit {page_size}" in data_norm
+
+    # -------- Validate count_sql --------
+    # Outer SELECT COUNT(*) and inner SELECT with same structure
+    assert "select count(*) from ( select count(*)" in count_norm
+    assert "columns_with_data_type" in count_norm
+    assert "project_name" in count_norm
+    assert schema_agg_expr in count_norm
+    assert f"from {table_name}".lower() in count_norm
+
+    # Same WHERE and GROUP BY inside subquery
+    assert where_clause_norm in count_norm
+    assert "group by columns_with_data_type, project_name" in count_norm
+    assert "as subquery" in count_norm
