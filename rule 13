@@ -1,0 +1,81 @@
+from unittest.mock import patch
+from src.utils.manage_rules.rule_13_backup_table_identification import (
+    Rule13_Backup_Table_Identification,
+)
+
+
+@patch(
+    "src.utils.manage_rules.rule_13_backup_table_identification.BaseRule.__init__",
+    return_value=None,
+)
+def test_get_query_rule13_backup_table_identification_positive(mock_init):
+    # Arrange
+    rule = Rule13_Backup_Table_Identification()
+
+    table_name = "my_table"
+    version_id = "v1"
+    market = "IN"
+    filters = "is_backup = true"
+    sort_by = ""          # we only assert on 'order by count' + 'desc', not this exact token
+    sort = "DESC"
+    offset = 5
+    page_size = 10
+
+    # Act
+    data_sql, count_sql = rule.get_query(
+        table_name=table_name,
+        version_id=version_id,
+        market=market,
+        filters=filters,
+        sort_by=sort_by,
+        sort=sort,
+        offset=offset,
+        page_size=page_size,
+    )
+
+    # Normalise (case + extra spaces) so formatting differences don't break the test
+    def norm(s: str) -> str:
+        return " ".join(s.lower().split())
+
+    data_norm = norm(data_sql)
+    count_norm = norm(count_sql)
+
+    # -------------------------------------------------
+    # Validate data_sql
+    # -------------------------------------------------
+    # SELECT schema_name, table_name, count(*) as count FROM ...
+    assert data_norm.startswith(
+        f"select schema_name, table_name, count(*) as count from {table_name}"
+    )
+
+    # WHERE clause
+    where_clause_norm = (
+        "where version_id = 'v1' and project_name = 'in' and is_backup = true"
+    )
+    assert where_clause_norm in data_norm
+
+    # GROUP BY schema_name, table_name
+    assert "group by schema_name, table_name" in data_norm
+
+    # ORDER BY count ... DESC
+    assert "order by count" in data_norm
+    assert sort.lower() in data_norm  # 'desc'
+
+    # Pagination
+    assert f"offset {offset}" in data_norm
+    assert f"limit {page_size}" in data_norm
+
+    # -------------------------------------------------
+    # Validate count_sql
+    # -------------------------------------------------
+    # Outer SELECT count(*) FROM ( SELECT schema_name FROM ...
+    assert count_norm.startswith(
+        f"select count(*) from ( select schema_name from {table_name}".lower()
+    )
+
+    # Same WHERE clause inside subquery
+    assert where_clause_norm in count_norm
+
+    # GROUP BY schema_name, table_name and subquery alias
+    assert "group by schema_name, table_name" in count_norm
+    assert "as subquery" in count_norm
