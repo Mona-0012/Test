@@ -1,5 +1,1 @@
-USE GRAPH Australia
-
-CREATE QUERY helloWorld() FOR GRAPH Australia {
-  PRINT "Hello from stored query!";
-}
+https://fnaasp.tigergraph-cluster.hsbc-12785106-fraudnetasp-dev.dev.gcp.cloud.hk.hsbc/gsql/v1/statements
