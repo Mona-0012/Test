@@ -1,3 +1,4 @@
-except ValueError:
-    cleaned = exec_resp.text.replace("\n", " ").replace("\r", " ")
-    tg_result = {"raw_response": cleaned}
+{
+  "market": "US",
+  "nlp": "Give me a GSQL query to count the total number of person vertices in the Australia graph."
+}
