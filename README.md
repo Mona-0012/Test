@@ -1,7 +1,3 @@
-# CALL LLM (Gemini only)
-logger.info("Calling Gemini LLM")
-
-gemini_client = GeminiCode(prompt=prompt)
-gsql_raw = gemini_client.optimize(prompt)
-
-logger.info("Received Gemini response %s", str(gsql_raw)[:100])
+curl -X POST "http://127.0.0.1:8000/execute_gsql" \
+  -H "Content-Type: application/json" \
+  -d "{\"market\":\"US\", \"gsql\":\"INTERPRET QUERY () FOR GRAPH Australia { start = {person.*}; INT total = start.size(); PRINT total; }\"}"
