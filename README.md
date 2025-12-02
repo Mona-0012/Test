@@ -1,5 +1,7 @@
-RULE: Only add filters when the NLP clearly mentions a specific value.
-If NLP mentions something like “account X”, “customer 123”, “age > 40”, “payments above 5000”, then include the correct WHERE or pattern filter.
-If NLP does NOT mention any specific value, do NOT add a filter.
-Never skip a filter when the NLP includes one.
-Never create a filter when the NLP doesn’t say one.
+RULE (FILTERS):
+- Only add filters when the NLP clearly mentions a specific value.
+- When a filter is needed, express it as a boolean condition in a WHERE clause on a vertex/edge alias, e.g.
+  WHERE alias.<attribute> <operator> <value>
+- Do NOT encode the value inside the vertex set literal (no patterns like {Type."value"} or {Type.value}).
+- Never skip a filter when the NLP includes one.
+- Never invent a filter when the NLP doesn’t say one.
