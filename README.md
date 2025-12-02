@@ -1,10 +1,5 @@
-def load_tg_config(marketname: str):
-    config = load_config(marketname)   # reuse existing loader
-    tg = config["TIGER GRAPH"]         # section name from your config.ini
-
-    return {
-        "host": tg.get("host"),
-        "username": tg.get("username"),
-        "password": tg.get("password"),
-        "graph": tg.get("graph")
-    }
+RULE: Only add filters when the NLP clearly mentions a specific value.
+If NLP mentions something like “account X”, “customer 123”, “age > 40”, “payments above 5000”, then include the correct WHERE or pattern filter.
+If NLP does NOT mention any specific value, do NOT add a filter.
+Never skip a filter when the NLP includes one.
+Never create a filter when the NLP doesn’t say one.
