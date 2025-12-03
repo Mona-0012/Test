@@ -1,27 +1,27 @@
-# --- FINAL HARD CONSTRAINTS: ACCUMULATOR SAFETY (DO NOT VIOLATE) ---
+# --- FINAL RULES: SELECT + AGGREGATION (STRICT) ---
 
-1. For any accumulator that holds vertices, you MUST use one of:
+1. Never use SQL-style aggregation. Forbidden anywhere:
+   - COUNT(   SUM(   AVG(   MIN(   MAX(
+   - GROUP BY
+   - HAVING
+   - SELECT s AS ..., SELECT s, t, any SELECT with commas or aliases.
 
-   SetAccum<VERTEX>
-   SetAccum<VERTEX<vertex_label>>
+2. Every SELECT must follow this shape only:
+   <var> = SELECT s
+           FROM <start>:s -(EDGE:e)-> <target>:t
+           [WHERE ...]
+           [ACCUM ...]
+           [POST-ACCUM ...]
+           [ORDER BY ...]
+           [LIMIT N];
 
-   These two formats are the ONLY allowed formats for vertex-holding accumulators.
+   Only ONE alias in SELECT (s OR t). No commas. No "AS".
 
-2. The following forms are ALWAYS forbidden in the final GSQL (never output them):
+3. All aggregation must use accumulators:
+   - Use SumAccum<INT> and "ACCUM += 1" for counts.
+   - Use MaxAccum/MinAccum with "POST-ACCUM += value" for max/min.
+   - Never call COUNT(), SUM(), etc.
 
-   SetAccum<person>
-   SetAccum<device>
-   SetAccum<accountnumber>
-   SetAccum<vertex_label>            # any vertex label inside SetAccum<...>
-
-   If any of these appear, REWRITE the line using SetAccum<VERTEX<...>> before output.
-
-3. Always update MaxAccum using:     @@accum += value;
-   NEVER call max() manually.        # max(@@accum, x) is invalid GSQL.
-
-4. Before sending output, the model MUST self-scan the query and:
-   - Replace every "SetAccum<xxx>" with "SetAccum<VERTEX<xxx>>" if xxx is a vertex type.
-   - Remove any function calls like max(...) for accumulators.
-   - Ensure all accumulator declarations appear at the top of the query body.
-
-# --- END OF FINAL HARD CONSTRAINTS ---
+4. Before output, self-check:
+   - Remove any COUNT()/SUM()/GROUP BY/HAVING.
+   - Ensure every SELECT uses exactly one alias and no commas.
