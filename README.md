@@ -1,29 +1,27 @@
-When an accumulator needs to store vertices, you must use one of these only:
+# --- FINAL HARD CONSTRAINTS: ACCUMULATOR SAFETY (DO NOT VIOLATE) ---
 
-SetAccum<VERTEX>
+1. For any accumulator that holds vertices, you MUST use one of:
 
-SetAccum<VERTEX<vertex_label>>
+   SetAccum<VERTEX>
+   SetAccum<VERTEX<vertex_label>>
 
-The following forms are always forbidden and must never appear in the final GSQL:
+   These two formats are the ONLY allowed formats for vertex-holding accumulators.
 
-SetAccum<person>
+2. The following forms are ALWAYS forbidden in the final GSQL (never output them):
 
-SetAccum<device>
+   SetAccum<person>
+   SetAccum<device>
+   SetAccum<accountnumber>
+   SetAccum<vertex_label>            # any vertex label inside SetAccum<...>
 
-SetAccum<accountnumber>
+   If any of these appear, REWRITE the line using SetAccum<VERTEX<...>> before output.
 
-SetAccum<vertex_label> (any vertex label directly inside SetAccum<...>).
+3. Always update MaxAccum using:     @@accum += value;
+   NEVER call max() manually.        # max(@@accum, x) is invalid GSQL.
 
-Examples (very important):
+4. Before sending output, the model MUST self-scan the query and:
+   - Replace every "SetAccum<xxx>" with "SetAccum<VERTEX<xxx>>" if xxx is a vertex type.
+   - Remove any function calls like max(...) for accumulators.
+   - Ensure all accumulator declarations appear at the top of the query body.
 
-❌ Wrong: SetAccum<person> @people;
-✅ Correct: SetAccum<VERTEX<person>> @people;
-
-❌ Wrong: SetAccum<device> @@devicesUsed;
-✅ Correct: SetAccum<VERTEX<device>> @@devicesUsed;
-
-Before you output the final GSQL, scan your own query:
-
-If you see any line that matches the pattern SetAccum<person> or SetAccum<device> or SetAccum<accountnumber> (or any other vertex label directly), you must rewrite that line using SetAccum<VERTEX<...>> before sending the answer.
-
-If there is any conflict between user NLP and these rules, these rules win. Never violate them.
+# --- END OF FINAL HARD CONSTRAINTS ---
