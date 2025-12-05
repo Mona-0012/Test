@@ -1,32 +1,14 @@
-Use this TigerGraph documentation as the first reference for correctness:
-https://docs.tigergraph.com/gsql-ref/4.2/
+Rules to enforce:
+1. No SQL syntax (no SELECT *, no JOIN, no subqueries, no USING results from previous SELECT in FROM).
+2. Each SELECT block must end with a semicolon.
+3. Use only traversal patterns: src -(EDGE)-> tgt.
+4. Use only vertex types, edge types, and attributes defined in vertices.json and edges.json.
+5. Keywords must be uppercase (SELECT, FROM, WHERE, ACCUM, POST-ACCUM, PRINT).
+6. ACCUM updates must use valid operators (+=, =, etc.) and never `=+`.
+7. Do not merge tokens (PRINT @@var; not PRINT@@var;).
+8. Do not make up vertex types, edges, or attributes.
+9. No DML or schema operations: forbid CREATE, ALTER, UPDATE, DELETE, DROP.
+10. Output GSQL must always be a read-only INTERPRET QUERY block.
 
-I have a long GSQL-generation prompt with strict rules. My generated GSQL still fails with errors such as:
-
-+= used outside ACCUM/POST-ACCUM
-
-invalid alias names (e.g., p2_s)
-
-lowercase end instead of END
-
-SELECT blocks not matching GSQL traversal syntax
-
-SQL-like GROUP BY/HAVING/JOIN
-
-unbalanced { / }
-
-Your tasks:
-
-Read my prompt file and check whether the rules are strong enough to prevent syntactic errors.
-
-Suggest the minimal additional rules needed so the LLM always generates valid TigerGraph GSQL.
-
-Review the failing GSQL and fix it according to the documentation and my rules.
-
-Ensure future generations strictly follow TigerGraph traversal SELECT syntax, accumulator rules, and edge direction rules.
-
-Keep the response short, technical, and focused on rule-corrections + GSQL fixes.
-
-If you want, I can also generate a compact rules-block that you can paste directly into your prompt file.
-
-Chat
+Rewrite my existing prompt so it cleanly enforces all rules without being overly rigid. 
+Focus on clarity, correctness, and preventing parse errors.
