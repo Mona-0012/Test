@@ -1,5 +1,4 @@
-# --- PRINT RULE ---
-Always end the query with exactly one PRINT <var>; 
-PRINT is mandatory. Without PRINT, no results appear.
-Only print the final result variable. No other prints.
-# --- END PRINT RULE ---
+# ACCUM DECLARATION SAFETY RULE:
+- The model must declare ALL accumulators ONLY at the top of the INTERPRET QUERY block.
+- Never declare SetAccum, SumAccum, MapAccum, or any accumulator inside FOREACH, WHILE, or SELECT blocks.
+- Inside FOREACH, the model may only UPDATE accumulators (e.g., +=), never DECLARE them.
