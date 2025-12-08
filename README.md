@@ -1,30 +1,29 @@
+People with heavy device usage and many outgoing payments
+------------------------------------------------------------
 INTERPRET QUERY () FOR GRAPH {graph_name} {{
-  BoolAccum @hasSharedDevice;
-  BoolAccum @hasPaymentLink;
+  SumAccum<INT> @deviceUseCount;
+  SumAccum<INT> @paymentCount;
 
   start = {{person.*}};
 
-  device_pairs =
-    SELECT p1
-    FROM start:p1 -(HAS_USED:e1)-> device:d -(reverse_HAS_USED:e2)-> person:p2
-    WHERE p1.person_id != p2.person_id
-    ACCUM p1.@hasSharedDevice = true;
+  device_usage =
+    SELECT p
+    FROM start:p -(HAS_USED:e1)-> device:d
+    ACCUM p.@deviceUseCount += 1;
 
-  payment_pairs =
-    SELECT p1
-    FROM start:p1
-         -(HAS_ACCOUNT:e3)-> accountnumber:a1
-         -(HAS_PAID:e4)->  accountnumber:a2
-         -(reverse_HAS_ACCOUNT:e5)-> person:p2
-    WHERE p1.person_id != p2.person_id
-    ACCUM p1.@hasPaymentLink = true;
+  outgoing_payments =
+    SELECT p
+    FROM start:p
+         -(HAS_ACCOUNT:e2)-> accountnumber:a1
+         -(HAS_PAID:e3)->  accountnumber:a2
+    ACCUM p.@paymentCount += 1;
 
-  suspicious =
+  risky =
     SELECT s
     FROM start:s
-    WHERE s.@hasSharedDevice == true
-      AND s.@hasPaymentLink == true
+    WHERE s.@deviceUseCount >= 5
+      AND s.@paymentCount > 20
     LIMIT 100;
 
-  PRINT suspicious;
+  PRINT risky;
 }}
