@@ -1,29 +1,27 @@
-People with heavy device usage and many outgoing payments
-------------------------------------------------------------
+Example 6: People who share a device AND receive money from the same user
+------------------------------------------------------------------------------
 INTERPRET QUERY () FOR GRAPH {graph_name} {{
-  SumAccum<INT> @deviceUseCount;
-  SumAccum<INT> @paymentCount;
+  BoolAccum @shareDeviceAndReceiveMoney;
 
   start = {{person.*}};
 
-  device_usage =
-    SELECT p
-    FROM start:p -(HAS_USED:e1)-> device:d
-    ACCUM p.@deviceUseCount += 1;
+  pairs =
+    SELECT p1
+    FROM start:p1
+         -(HAS_USED:e1)-> device:d
+         -(reverse_HAS_USED:e2)-> person:p2
+         -(HAS_ACCOUNT:e3)-> accountnumber:a2
+         -(HAS_PAID:e4)->  accountnumber:a1
+         -(reverse_HAS_ACCOUNT:e5)-> person:p3
+    WHERE p1.person_id != p2.person_id
+      AND p1.person_id == p3.person_id
+    ACCUM p1.@shareDeviceAndReceiveMoney = true;
 
-  outgoing_payments =
-    SELECT p
-    FROM start:p
-         -(HAS_ACCOUNT:e2)-> accountnumber:a1
-         -(HAS_PAID:e3)->  accountnumber:a2
-    ACCUM p.@paymentCount += 1;
-
-  risky =
+  suspicious =
     SELECT s
     FROM start:s
-    WHERE s.@deviceUseCount >= 5
-      AND s.@paymentCount > 20
+    WHERE s.@shareDeviceAndReceiveMoney == true
     LIMIT 100;
 
-  PRINT risky;
+  PRINT suspicious;
 }}
