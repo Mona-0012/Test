@@ -1,14 +1,50 @@
-Rules to enforce:
-1. No SQL syntax (no SELECT *, no JOIN, no subqueries, no USING results from previous SELECT in FROM).
-2. Each SELECT block must end with a semicolon.
-3. Use only traversal patterns: src -(EDGE)-> tgt.
-4. Use only vertex types, edge types, and attributes defined in vertices.json and edges.json.
-5. Keywords must be uppercase (SELECT, FROM, WHERE, ACCUM, POST-ACCUM, PRINT).
-6. ACCUM updates must use valid operators (+=, =, etc.) and never `=+`.
-7. Do not merge tokens (PRINT @@var; not PRINT@@var;).
-8. Do not make up vertex types, edges, or attributes.
-9. No DML or schema operations: forbid CREATE, ALTER, UPDATE, DELETE, DROP.
-10. Output GSQL must always be a read-only INTERPRET QUERY block.
+def get_retry_prompt(
+    graph_name: str,
+    nodes: list[dict],
+    edges: list[dict],
+    original_text: str,
+    invalid_gsql: str,
+    tg_error: str,
+    schema_text: str,
+    allowed_numeric_text: str,
+    relations_text: str,
+):
+    """
+    Build the retry prompt using your existing GSQL prompt generator.
 
-Rewrite my existing prompt so it cleanly enforces all rules without being overly rigid. 
-Focus on clarity, correctness, and preventing parse errors.
+    Inputs required for retry:
+    - original_text      (the NLP)
+    - invalid_gsql       (what the LLM generated first)
+    - tg_error           (error from TigerGraph)
+    - all schema/prompt blocks exactly same as first call
+    """
+
+    # Build a new TASK string for the retry
+    retry_task = f"""
+The previous GSQL you generated for this NLP failed with a TigerGraph syntax/semantic error.
+Your job is to FIX the GSQL and regenerate a syntactically valid TigerGraph GSQL query.
+
+NATURAL LANGUAGE REQUEST:
+{original_text}
+
+PREVIOUS INVALID GSQL:
+{invalid_gsql}
+
+TIGERGRAPH ERROR MESSAGE:
+{tg_error}
+
+Follow ALL the same rules, schema, edge directions, accumulator restrictions,
+and output rules exactly as specified in this prompt.  
+Return ONLY the corrected GSQL query.
+""".strip()
+
+    # Reuse your existing generator exactly as-is
+    return get_prompt_for_generating_gsql(
+        graph_name=graph_name,
+        nodes=nodes,
+        edges=edges,
+        task=retry_task,                   # <--- only this changes
+        schema_text=schema_text,
+        allowed_numeric_text=allowed_numeric_text,
+        relations_text=relations_text,
+    )
