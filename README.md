@@ -1,6 +1,17 @@
-    15. **COUNTING & TOTALS RULE**:
-       - IF User asks "Total number" / "Grand Total":
-         Use `SumAccum<INT> @@total;` -> `ACCUM @@total += 1` -> `PRINT @@total;`
-       - IF User asks "Count per person" / "How many for each":
-         Use `SumAccum<INT> @count;` -> `ACCUM p.@count += 1` -> `PRINT result[result.customer_id, result.@count];`
-       - NEVER use generic `SELECT p.attr` syntax. ALWAYS use `PRINT Set[Set.attr]` to show columns.
+USE GRAPH Query_Genie
+INTERPRET QUERY () FOR GRAPH Query_Genie {
+  // Start with all persons
+  start = {person.*};
+  
+  // 1. Select ONLY the specific person returned in your result
+  target_person = SELECT p 
+                  FROM start:p 
+                  WHERE p.customer_id == "0291c8db099dc115baa31592b6af7056b314eaecdf615baa478082e5a76617ce";
+
+  // 2. Traverse to find their devices
+  // If this returns ANY device, the relationship exists.
+  devices = SELECT d
+            FROM target_person:p -(HAS_USED)-> device:d;
+            
+  PRINT devices;
+}
