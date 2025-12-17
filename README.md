@@ -1,17 +1,40 @@
-USE GRAPH Query_Genie
+
 INTERPRET QUERY () FOR GRAPH Query_Genie {
-  // Start with all persons
+  SumAccum<INT> @@muleCount;
   start = {person.*};
   
-  // 1. Select ONLY the specific person returned in your result
-  target_person = SELECT p 
-                  FROM start:p 
-                  WHERE p.customer_id == "0291c8db099dc115baa31592b6af7056b314eaecdf615baa478082e5a76617ce";
+  result = SELECT p FROM start:p 
+           WHERE p.mule == true
+           ACCUM @@muleCount += 1;
+           
+  PRINT @@muleCount;
+}
 
-  // 2. Traverse to find their devices
-  // If this returns ANY device, the relationship exists.
-  devices = SELECT d
-            FROM target_person:p -(HAS_USED)-> device:d;
-            
-  PRINT devices;
+
+
+
+INTERPRET QUERY () FOR GRAPH Query_Genie {
+  SumAccum<INT> @@mobileCount;
+  start = {device.*};
+  
+  result = SELECT d FROM start:d 
+           WHERE d.devicetype == "Mobile"
+           ACCUM @@mobileCount += 1;
+           
+  PRINT @@mobileCount;
+}
+
+
+
+USE GRAPH Query_Genie
+INTERPRET QUERY () FOR GRAPH Query_Genie {
+  start = {person.*};
+  
+  // 1. Get Mules
+  mules = SELECT p FROM start:p WHERE p.mule == true;
+  
+  // 2. See their devices (regardless of type)
+  mule_devices = SELECT d FROM mules:p -(HAS_USED)-> device:d;
+  
+  PRINT mule_devices;
 }
