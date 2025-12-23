@@ -1,21 +1,34 @@
-I need to add two new FastAPI endpoints for TigerGraph.
+@pg_router.get("/tg/get-config-tables")
+def tg_get_config_tables():
+    try:
+        conn = psycopg2.connect(
+            host="localhost",
+            dbname="metadata_db",
+            user="postgres",
+            password="password"
+        )
+        cur = conn.cursor()
 
-Requirements:
-1. Do NOT touch or modify my existing BQ APIs. They are already working.
-2. Create two new GET APIs:
-      - /tg/get-vertex-tables
-      - /tg/get-edge-tables
-3. Both APIs must call TigerGraph’s schema endpoint:
-      GET http://<TG-IP>:14240/gsqlserver/gsql/schema?graph=<GRAPH_NAME>
-4. Use the Bearer token: <YOUR_TOKEN>
-5. Vertex API should return:
-      { "tables": [list of VertexTypes.Name] }
-6. Edge API should return:
-      { "tables": [list of EdgeTypes.Name] }
-7. If the schema fetch fails, raise HTTPException(500)
-8. Keep the code clean, readable, and production-safe:
-      - shared function fetch_tg_schema()
-      - correct error handling
-      - no duplication
+        sql = """
+            SELECT table_name
+            FROM information_schema.tables
+            WHERE table_schema = 'public'
+              AND (
+                   table_name LIKE 'vertex_%'
+                OR table_name LIKE 'edge_%'
+              )
+            ORDER BY table_name;
+        """
 
-Generate only the backend code for these two APIs using FastAPI and Python.
+        cur.execute(sql)
+        rows = cur.fetchall()
+
+        tg_tables = [r[0] for r in rows]
+
+        cur.close()
+        conn.close()
+
+        return {"tables": tg_tables}
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
