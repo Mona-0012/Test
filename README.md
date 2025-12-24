@@ -1,34 +1,42 @@
 @pg_router.get("/tg/get-config-tables")
 def tg_get_config_tables():
     try:
-        conn = psycopg2.connect(
-            host="localhost",
-            dbname="metadata_db",
-            user="postgres",
-            password="password"
-        )
+        logger.debug("Loading TG config table names from Cloud SQL")
+
+        db_util = GoogleCloudSqlUtility(HOST_PROJECT)
+        conn = db_util.get_db_connection()
+
+        logger.info("Connecting to PostgreSQL for TG tables - connection: %s", conn)
         cur = conn.cursor()
 
-        sql = """
-            SELECT table_name
-            FROM information_schema.tables
-            WHERE table_schema = 'public'
-              AND (
-                   table_name LIKE 'vertex_%'
-                OR table_name LIKE 'edge_%'
-              )
+        logger.debug("Executing query to fetch TG related tables")
+        print("SELECT table_name FROM information_schema.tables WHERE table_schema='public' AND (table_name LIKE 'vertex_%' OR table_name LIKE 'edge_%') ORDER BY table_name")
+
+        cur.execute("""
+            SELECT table_name 
+            FROM information_schema.tables 
+            WHERE table_schema='public'
+              AND (table_name LIKE 'vertex_%%' OR table_name LIKE 'edge_%%')
             ORDER BY table_name;
-        """
+        """)
 
-        cur.execute(sql)
         rows = cur.fetchall()
+        row_list = []
 
-        tg_tables = [r[0] for r in rows]
+        for i in rows:
+            row_list.append(i[0])
 
-        cur.close()
-        conn.close()
-
-        return {"tables": tg_tables}
+        return JSONResponse(
+            status_code=200,
+            content={"tables": row_list}
+        )
 
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error("TG_TABLES_ERROR: PostgreSQL Error: %s", str(e))
+        raise HTTPException(status_code=500, detail="Error fetching TG tables")
+
+    finally:
+        if conn:
+            cur.close()
+            conn.close()
+            logger.debug("Database connection closed for TG table fetch")
