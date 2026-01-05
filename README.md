@@ -1,41 +1,9 @@
-Update the existing /tg/get-config-tables API to be tab-aware.
+When a vertex is selected from the dropdown (e.g., accountnumber), read the backend response from /tg/get-config-tables, find the matching vertex object, and dynamically populate the Vertex Metadata table.
 
-Requirements:
-- Do NOT change DB connection, utilities, logging, or error handling.
-- Accept a query parameter: type=vertex or type=edge.
+Show each attribute as a separate row where:
 
-Behavior:
-- If type=vertex:
-  - Query Cloud SQL table `vertex_config`
-  - SELECT vertex_name, primary_id, attributes
-  - Parse attributes JSON
-  - Return:
-    {
-      "vertices": [
-        {
-          "vertex_name": string,
-          "primary_id": string,
-          "attributes": list
-        }
-      ]
-    }
+Key = attribute name
 
-- If type=edge:
-  - Query Cloud SQL table `edge_config`
-  - SELECT edge_name, from_vertex, to_vertex, directed, attributes
-  - Parse attributes JSON
-  - Return:
-    {
-      "edges": [
-        {
-          "edge_name": string,
-          "from_vertex": string,
-          "to_vertex": string,
-          "directed": boolean,
-          "attributes": list
-        }
-      ]
-    }
+Value = attribute type
 
-- Remove old vertex_names / edge_names logic.
-- Keep everything else unchanged.
+Update the table reactively on vertex change and keep the existing UI layout and Save/Edit actions unchanged.
