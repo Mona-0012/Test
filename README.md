@@ -1,11 +1,14 @@
-Fix the vertex change handling so that Vertex Metadata updates correctly on every dropdown change.
+When a vertex is selected from the dropdown (e.g., accountnumber), read the backend response from /tg/get-config-tables, find the matching vertex object, and dynamically populate the Vertex Metadata table.
 
-On selectedVertex change:
+Show each attribute as a separate row where:
 
-Clear previous vertex metadata state
+Key = attribute name
 
-Re-find the vertex object from the latest /tg/get-config-tables response using vertex_name === selectedVertex
+Value = attribute type
 
-Rebuild the metadata rows from that vertex only
+Update the table reactively on vertex change and keep the existing UI layout and Save/Edit actions unchanged.
 
-Do not reuse cached data from the previously selected vertex. Ensure switching from accountnumber → device shows only device attributes.
+Make Vertex Metadata fully dynamic.
+Whenever the selected vertex changes, dynamically load and display only the metadata of the currently selected vertex (matching vertex_name).
+
+Do not retain or reuse data from the previously selected vertex. The table must always reflect the current dropdown selection.
